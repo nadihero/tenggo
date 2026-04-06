@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TimeBlock PWA
 
-## Getting Started
+A minimalist daily time-blocking planner with smart notifications. Built with Next.js 15, TypeScript, Tailwind CSS, and Zustand.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Zero Database**: All data stored in localStorage via Zustand persist middleware
+- **Visual Timeline**: Daily schedule view from 00:00 - 23:59
+- **Smart Notifications**: Browser notifications when block start time arrives
+- **Sound Alerts**: Web Audio API notification sounds (toggleable)
+- **PWA Ready**: Installable app with offline support
+- **Mobile-First**: Responsive design optimized for mobile devices
+- **Clean UI**: Apple/Minimalist aesthetic with Tailwind CSS
+
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router) + TypeScript
+- **State Management**: Zustand with persist middleware
+- **Styling**: Tailwind CSS + Shadcn UI
+- **PWA**: next-pwa for service worker and manifest
+- **Date Handling**: date-fns
+- **Icons**: Lucide React
+
+## Project Structure
+
+```
+├── app/
+│   ├── ~offline/page.tsx    # Offline fallback page
+│   ├── layout.tsx           # Root layout with PWA meta tags
+│   ├── page.tsx             # Main page with Timeline
+│   └── globals.css          # Global styles
+├── components/
+│   ├── Timeline.tsx         # Main timeline component
+│   └── ui/                  # Shadcn UI components
+├── hooks/
+│   └── useAlarm.ts          # Alarm/notification logic
+├── store/
+│   └── useTaskStore.ts      # Zustand store with persist
+├── public/
+│   ├── manifest.json        # PWA manifest
+│   ├── sw.js                # Custom service worker
+│   └── icons/               # App icons
+└── next.config.ts           # Next.js + PWA config
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Key Components
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. Zustand Store (`store/useTaskStore.ts`)
+- Defines `TimeBlock` interface with id, title, start/end times, color, date
+- Persist middleware saves to localStorage automatically
+- Actions: add, update, delete, toggle complete, mark notified
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2. Alarm Logic (`hooks/useAlarm.ts`)
+- Checks every minute for blocks starting at current time
+- Plays sound notification using Web Audio API
+- Triggers browser notifications via Notification API
+- Sends push notifications through service worker
 
-## Learn More
+### 3. Service Worker (`public/sw.js`)
+- Caches static assets for offline use
+- Handles push notifications in background
+- Fallback to offline page when network fails
 
-To learn more about Next.js, take a look at the following resources:
+### 4. Timeline Component (`components/Timeline.tsx`)
+- Visual daily schedule with color-coded blocks
+- Date navigation (previous/next/today)
+- Add/Edit block dialogs
+- Mobile-optimized floating action button
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploy to Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# Install dependencies
+npm install
 
-## Deploy on Vercel
+# Build for production
+npm run build
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Deploy to Vercel
+vercel --prod
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Development
+
+```bash
+# Run dev server
+npm run dev
+
+# Build
+npm run build -- --webpack
+
+# Start production server
+npm start
+```
+
+## Browser Support
+
+- Chrome/Edge (recommended for best PWA experience)
+- Firefox
+- Safari (iOS 16.4+ for Web Push)
+
+## License
+
+MIT
