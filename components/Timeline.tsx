@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAlarm, useNotificationPermission } from "@/hooks/useAlarm";
+import { BellRing } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Beautiful gradient backgrounds based on time of day
@@ -398,7 +399,7 @@ export function Timeline() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Initialize alarm system
-  useAlarm();
+  const { testNotification } = useAlarm();
 
   // Handle hydration and time updates
   useEffect(() => {
@@ -494,6 +495,17 @@ export function Timeline() {
               >
                 {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
               </button>
+
+              {/* Test notification button - shown when permission granted */}
+              {isSupported && permission === "granted" && (
+                <button
+                  onClick={testNotification}
+                  className="w-11 h-11 rounded-xl bg-green-100 text-green-600 flex items-center justify-center transition-all active:scale-90"
+                  title="Test notification"
+                >
+                  <BellRing className="w-5 h-5" />
+                </button>
+              )}
 
               {/* Notification permission */}
               {isSupported && permission !== "granted" && (

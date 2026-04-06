@@ -102,30 +102,64 @@ const showNotification = (block: TimeBlock) => {
 
 // Send push notification via service worker (for background notifications)
 const sendPushNotification = async (block: TimeBlock) => {
-  if (!navigator.serviceWorker?.ready) return;
-
   try {
-    const registration = await navigator.serviceWorker.ready;
-    await registration.showNotification("TimeBlock - Time's Up!", {
-      body: `"${block.title}" starts now (${block.startTime})`,
-      icon: "/icons/icon-192x192.png",
-      badge: "/icons/icon-72x72.png",
-      tag: `block-${block.id}`,
-      requireInteraction: true,
-      data: {
-        blockId: block.id,
-        url: "/",
-      },
-    } as NotificationOptions);
+    // Try service worker notification first
+    if (navigator.serviceWorker?.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SHOW_NOTIFICATION',
+        title: "TimeBlock - Time's Up!",
+        body: `"${block.title}" starts now (${block.startTime})`,
+        tag: `block-${block.id}`,
+        data: {
+          blockId: block.id,
+          url: '/',
+        },
+      });
+      return;
+    }
+
+    // Fallback to registration.showNotification
+    if (navigator.serviceWorker?.ready) {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification("TimeBlock - Time's Up!", {
+        body: `"${block.title}" starts now (${block.startTime})`,
+        icon: "/icons/icon-192x192.png",
+        badge: "/icons/icon-72x72.png",
+        tag: `block-${block.id}`,
+        requireInteraction: true,
+        vibrate: [200, 100, 200],
+        data: {
+          blockId: block.id,
+          url: "/",
+        },
+      } as NotificationOptions);
+    }
   } catch (error) {
     console.error("Error sending push notification:", error);
   }
+};
+
+// Register custom service worker for notifications
+const registerCustomSW = async () => {
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register('/custom-sw.js', {
+        scope: '/',
+      });
+      console.log('[TimeBlock] Custom SW registered:', registration.scope);
+      return registration;
+    } catch (error) {
+      console.error('[TimeBlock] Custom SW registration failed:', error);
+    }
+  }
+  return null;
 };
 
 export const useAlarm = () => {
   const { blocks, soundEnabled, markNotified, getActiveBlocksForToday } =
     useTaskStore();
   const checkedBlocksRef = useRef<Set<string>>(new Set());
+  const swRegisteredRef = useRef(false);
 
   const checkAlarms = useCallback(() => {
     const now = new Date();
@@ -167,11 +201,17 @@ export const useAlarm = () => {
   }, [blocks, soundEnabled, markNotified]);
 
   useEffect(() => {
+    // Register custom service worker on mount
+    if (!swRegisteredRef.current) {
+      swRegisteredRef.current = true;
+      registerCustomSW();
+    }
+
     // Check immediately on mount
     checkAlarms();
 
-    // Set up interval to check every minute
-    const interval = setInterval(checkAlarms, 60000);
+    // Set up interval to check every 10 seconds for more responsive alarms
+    const interval = setInterval(checkAlarms, 10000);
 
     // Also check when tab becomes visible
     const handleVisibilityChange = () => {
@@ -187,7 +227,57 @@ export const useAlarm = () => {
     };
   }, [checkAlarms]);
 
-  return { checkAlarms };
+  // Test notification function
+  const testNotification = useCallback(async () => {
+    // Play sound
+    if (soundEnabled) {
+      playNotificationSound();
+    }
+
+    // Request permission if needed
+    if (Notification.permission !== "granted") {
+      await Notification.requestPermission();
+    }
+
+    // Show test notification
+    if (Notification.permission === "granted") {
+      try {
+        // Try service worker first
+        if (navigator.serviceWorker?.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title: "TimeBlock - Test",
+            body: "Notifications are working! 🎉",
+            tag: "test-notification",
+            data: { url: '/' },
+          });
+        } else if (navigator.serviceWorker?.ready) {
+          const registration = await navigator.serviceWorker.ready;
+          await registration.showNotification("TimeBlock - Test", {
+            body: "Notifications are working! 🎉",
+            icon: "/icons/icon-192x192.png",
+            badge: "/icons/icon-72x72.png",
+            tag: "test-notification",
+            vibrate: [200, 100, 200],
+          } as NotificationOptions);
+        } else {
+          // Fallback to regular notification
+          new Notification("TimeBlock - Test", {
+            body: "Notifications are working! 🎉",
+            icon: "/icons/icon-192x192.png",
+          });
+        }
+      } catch (error) {
+        console.error("Test notification error:", error);
+        // Final fallback
+        new Notification("TimeBlock - Test", {
+          body: "Notifications are working! 🎉",
+        });
+      }
+    }
+  }, [soundEnabled]);
+
+  return { checkAlarms, testNotification };
 };
 
 // Hook to handle notification permission
